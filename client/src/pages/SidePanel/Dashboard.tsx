@@ -8,7 +8,7 @@ import { PieChartCard } from '@/components/charts/pie-chart';
 import { LineChartCard } from '@/components/charts/line-chart';
 import { BarChartCard } from '@/components/charts/bar-chart';
 import { DataTable } from '@/components/data-table/data-table';
-import type { Datasets } from '@/hooks/use-agent-chat';
+import type { Datasets } from '@/store/chat-store';
 
 interface Order {
   id: string;

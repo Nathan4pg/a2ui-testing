@@ -1,12 +1,13 @@
 import * as React from 'react';
-import { Bot, Loader2, Send, Sparkles, User } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Bot, Send, Sparkles, Square, User } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { ChatArtifact } from '@/components/chat-artifact';
-import type { ChatItem, MessageItem } from '@/hooks/use-agent-chat';
+import { useChatStore, type ChatItem, type MessageItem } from '@/store/chat-store';
 
 const SUGGESTIONS = [
   'Show me the traffic breakdown by channel',
@@ -15,13 +16,10 @@ const SUGGESTIONS = [
   'List the most recent orders',
 ];
 
-interface ChatProps {
-  items: ChatItem[];
-  activeTool: string | null;
-  status: 'idle' | 'running' | 'error';
-  error: string | null;
-  onSend: (text: string) => void;
-}
+const ENTER = { opacity: 1, y: 0 };
+const FROM_BELOW = { opacity: 0, y: 10 };
+const EXIT_UP = { opacity: 0, y: -10 };
+const SPRING = { type: 'spring' as const, stiffness: 500, damping: 38, mass: 0.8 };
 
 function MessageBubble({ message }: { message: MessageItem }) {
   const isUser = message.role === 'user';
@@ -43,40 +41,106 @@ function MessageBubble({ message }: { message: MessageItem }) {
             : 'bg-muted text-foreground'
         )}
       >
-        {message.content || (
-          <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" /> thinking…
-          </span>
-        )}
+        {message.content}
       </div>
     </div>
   );
 }
 
-function TimelineItem({ item }: { item: ChatItem }) {
-  if (item.kind === 'message') return <MessageBubble message={item} />;
-  // artifact: native chart / table
+/** Animated three-dot indicator. */
+function ThinkingDots() {
   return (
-    <div className="pl-9">
-      <ChatArtifact artifact={item} />
-    </div>
+    <span className="inline-flex items-center gap-1">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="inline-block h-1.5 w-1.5 rounded-full bg-current"
+          animate={{ opacity: [0.25, 1, 0.25], y: [0, -2, 0] }}
+          transition={{
+            duration: 1,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: i * 0.18,
+          }}
+        />
+      ))}
+    </span>
   );
 }
 
-export function Chat({ items, activeTool, status, error, onSend }: ChatProps) {
+/** The ephemeral "thinking" bubble shown before the assistant's text arrives. */
+function ThinkingBubble({ label }: { label: string }) {
+  return (
+    <motion.div
+      layout
+      initial={FROM_BELOW}
+      animate={ENTER}
+      exit={EXIT_UP}
+      transition={SPRING}
+      className="flex gap-2"
+    >
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+        <Bot className="h-4 w-4" />
+      </div>
+      <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+        <ThinkingDots />
+        <span>{label}</span>
+      </div>
+    </motion.div>
+  );
+}
+
+function TimelineItem({ item }: { item: ChatItem }) {
+  return (
+    <motion.div
+      layout
+      initial={FROM_BELOW}
+      animate={ENTER}
+      transition={SPRING}
+    >
+      {item.kind === 'message' ? (
+        <MessageBubble message={item} />
+      ) : (
+        <div className="pl-9">
+          <ChatArtifact artifact={item} />
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+export function Chat() {
+  const items = useChatStore((s) => s.items);
+  const phase = useChatStore((s) => s.phase);
+  const activeTool = useChatStore((s) => s.activeTool);
+  const error = useChatStore((s) => s.error);
+  const send = useChatStore((s) => s.send);
+  const stop = useChatStore((s) => s.stop);
+
   const [input, setInput] = React.useState('');
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
+  const isActive =
+    phase === 'thinking' || phase === 'tool' || phase === 'streaming';
+  const showThinking = phase === 'thinking' || phase === 'tool';
+  const thinkingLabel =
+    phase === 'tool' && activeTool ? `Calling ${activeTool}…` : 'Thinking…';
+
+  // Keep pinned to the bottom while the user is already near the bottom, so the
+  // panel follows new content without yanking them if they've scrolled up.
   React.useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: 'smooth',
-    });
-  }, [items, activeTool]);
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 140;
+    if (nearBottom) {
+      el.scrollTo({ top: el.scrollHeight });
+    }
+  }, [items, phase]);
 
   const submit = () => {
-    if (!input.trim() || status === 'running') return;
-    onSend(input);
+    if (!input.trim() || isActive) return;
+    send(input);
     setInput('');
   };
 
@@ -87,11 +151,11 @@ export function Chat({ items, activeTool, status, error, onSend }: ChatProps) {
     }
   };
 
-  const empty = items.length === 0;
+  const empty = items.length === 0 && !isActive;
 
   return (
     <div className="flex h-full flex-col">
-      <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-3">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3">
         {empty ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -107,7 +171,7 @@ export function Chat({ items, activeTool, status, error, onSend }: ChatProps) {
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
-                  onClick={() => onSend(s)}
+                  onClick={() => send(s)}
                   className="rounded-md border bg-card px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
                 >
                   {s}
@@ -116,22 +180,25 @@ export function Chat({ items, activeTool, status, error, onSend }: ChatProps) {
             </div>
           </div>
         ) : (
-          items.map((it) => <TimelineItem key={it.id} item={it} />)
-        )}
+          <div className="flex flex-col gap-4">
+            {items.map((it) => (
+              <TimelineItem key={it.id} item={it} />
+            ))}
 
-        {activeTool ? (
-          <div className="flex items-center gap-2 pl-9 text-xs text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Calling tool <code className="font-mono">{activeTool}</code>…
+            <AnimatePresence mode="popLayout">
+              {showThinking ? (
+                <ThinkingBubble key="thinking" label={thinkingLabel} />
+              ) : null}
+            </AnimatePresence>
+
+            {error ? (
+              <Alert variant="destructive">
+                <AlertTitle>Agent error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
           </div>
-        ) : null}
-
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTitle>Agent error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
+        )}
       </div>
 
       <div className="border-t bg-background p-3">
@@ -144,21 +211,31 @@ export function Chat({ items, activeTool, status, error, onSend }: ChatProps) {
             rows={1}
             className="max-h-32 min-h-[2.5rem] resize-none"
           />
-          <Button
-            size="icon"
-            onClick={submit}
-            disabled={!input.trim() || status === 'running'}
-            aria-label="Send"
-          >
-            {status === 'running' ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
+          {isActive ? (
+            <Button
+              size="icon"
+              variant="secondary"
+              onClick={stop}
+              aria-label="Stop"
+              title="Stop generating"
+            >
+              <Square className="h-4 w-4 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              onClick={submit}
+              disabled={!input.trim()}
+              aria-label="Send"
+            >
               <Send className="h-4 w-4" />
-            )}
-          </Button>
+            </Button>
+          )}
         </div>
         <p className="mt-1 text-[10px] text-muted-foreground">
-          Enter to send · Shift+Enter for a new line
+          {isActive
+            ? 'Generating… press stop to interrupt'
+            : 'Enter to send · Shift+Enter for a new line'}
         </p>
       </div>
     </div>

@@ -6,7 +6,7 @@ import { PieChartCard, PieDatum } from '@/components/charts/pie-chart';
 import { LineChartCard } from '@/components/charts/line-chart';
 import { BarChartCard } from '@/components/charts/bar-chart';
 import { DataTable } from '@/components/data-table/data-table';
-import type { ArtifactItem } from '@/hooks/use-agent-chat';
+import type { ArtifactItem } from '@/store/chat-store';
 
 type Row = Record<string, string | number>;
 

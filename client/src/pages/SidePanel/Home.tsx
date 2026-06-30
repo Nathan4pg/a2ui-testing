@@ -4,13 +4,13 @@ import { BarChart3, MessageSquare, RotateCcw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
-import { useAgentChat } from '@/hooks/use-agent-chat';
+import { useChatStore } from '@/store/chat-store';
 import { Chat } from './Chat';
 import { Dashboard } from './Dashboard';
 
 export default function Home() {
-  const { items, datasets, activeTool, status, error, sendMessage, reset } =
-    useAgentChat();
+  const datasets = useChatStore((s) => s.datasets);
+  const reset = useChatStore((s) => s.reset);
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
@@ -47,13 +47,7 @@ export default function Home() {
         </TabsList>
 
         <TabsContent value="chat" className="mt-2 min-h-0 flex-1 outline-none">
-          <Chat
-            items={items}
-            activeTool={activeTool}
-            status={status}
-            error={error}
-            onSend={sendMessage}
-          />
+          <Chat />
         </TabsContent>
 
         <TabsContent
