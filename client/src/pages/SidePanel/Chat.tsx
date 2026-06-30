@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
-import { A2uiSurfaceView } from '@/components/a2ui-surface';
 import { ChatArtifact } from '@/components/chat-artifact';
 import type { ChatItem, MessageItem } from '@/hooks/use-agent-chat';
 
@@ -56,19 +55,10 @@ function MessageBubble({ message }: { message: MessageItem }) {
 
 function TimelineItem({ item }: { item: ChatItem }) {
   if (item.kind === 'message') return <MessageBubble message={item} />;
-  if (item.kind === 'artifact')
-    return (
-      <div className="pl-9">
-        <ChatArtifact artifact={item} />
-      </div>
-    );
-  // a2ui
+  // artifact: native chart / table
   return (
-    <div className="space-y-1 pl-9">
-      <p className="text-xs font-medium text-muted-foreground">
-        Server-rendered (a2ui)
-      </p>
-      <A2uiSurfaceView messages={item.messages} />
+    <div className="pl-9">
+      <ChatArtifact artifact={item} />
     </div>
   );
 }

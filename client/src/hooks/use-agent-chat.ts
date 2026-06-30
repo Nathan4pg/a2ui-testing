@@ -21,13 +21,7 @@ export interface ArtifactItem {
   data: unknown;
 }
 
-export interface A2uiItem {
-  kind: 'a2ui';
-  id: string;
-  messages: any[];
-}
-
-export type ChatItem = MessageItem | ArtifactItem | A2uiItem;
+export type ChatItem = MessageItem | ArtifactItem;
 
 export interface Dataset {
   tool: string;
@@ -131,15 +125,12 @@ export function useAgentChat(baseUrl?: string) {
                     },
                   ]);
                 }
-              } else if (event.name === 'a2ui') {
-                const msgs = event.value?.messages ?? [];
-                if (Array.isArray(msgs) && msgs.length) {
-                  setItems((prev) => [
-                    ...prev,
-                    { kind: 'a2ui', id: uid(), messages: msgs },
-                  ]);
-                }
               }
+              // Note: the server also streams an `a2ui` custom event with a
+              // server-rendered surface for the same result. We intentionally
+              // don't render it here — the native chart/table above is the
+              // single representation, so showing the a2ui card too would
+              // duplicate it. (a2ui still lives on the server.)
             },
             onRunFinishedEvent: () => {
               setActiveTool(null);
