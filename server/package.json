@@ -1,0 +1,47 @@
+{
+  "name": "express-sequelize-boilerplate",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/gadfaria/express-sequelize-boilerplate.git",
+  "author": "gadfaria <gadfaria@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "mcp": "tsx watch mcp/index.ts",
+    "mcp:start": "tsx mcp/index.ts"
+  },
+  "dependencies": {
+    "@a2ui/react": "^0.9.1",
+    "@ag-ui/client": "^0.0.53",
+    "@ag-ui/core": "^0.0.53",
+    "@ag-ui/encoder": "^0.0.53",
+    "@ag-ui/proto": "^0.0.53",
+    "@aws-sdk/client-s3": "^3.310.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.0.1",
+    "express": "^4.20.0",
+    "jsonwebtoken": "^9.0.0",
+    "moment": "^2.29.3",
+    "multer": "^2.0.2",
+    "mysql2": "^3.9.8",
+    "ollama": "^0.6.3",
+    "pg": "^8.10.0",
+    "sequelize": "^6.28.2",
+    "uuid": "^9.0.0",
+    "yup": "^1.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.0.1",
+    "nodemon": "^2.0.18",
+    "sequelize-cli": "^6.4.1",
+    "sucrase": "^3.23.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}
